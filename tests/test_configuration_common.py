@@ -213,6 +213,10 @@ class ConfigTester(object):
             for modeling_source in modeling_sources:
                 if f"config.{attribute}" in modeling_source or f'getattr(config, "{attribute}"' in modeling_source:
                     attribute_used = True
+                elif attribute in ["summary_type", "summary_use_proj", "summary_activation", "summary_last_dropout"]:
+                    if "SequenceSummary" in modeling_source:
+                        attribute_used = True
+                if attribute_used:
                     break
             if attribute_used:
                 break
