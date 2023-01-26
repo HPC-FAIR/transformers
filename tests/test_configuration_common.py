@@ -237,7 +237,7 @@ class ConfigTester(object):
                 ]:
                     case_allowed = True
                 # DPR has `self.bert` and the config has to be able to initialize a BERT model.
-                if attribute == "vocab_size" and self.config_class.__name__ in ["DPRConfig"]:
+                if self.config_class.__name__ in ["DPRConfig"]:
                     case_allowed = True
                 if attribute.endswith("_token_id"):
                     case_allowed = True
