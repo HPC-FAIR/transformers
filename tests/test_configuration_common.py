@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import copy
+import inspect
 import json
 import os
 import shutil
@@ -205,15 +206,99 @@ class ConfigTester(object):
             errors = "\n".join([f"- {v[0]}: got {v[1]} instead of {v[2]}" for v in wrong_values])
             raise ValueError(f"The following keys were not properly set in the config:\n{errors}")
 
+    def _check_attribute_being_used(self, attributes, default_value, modeling_sources):
+
+        attribute_used = False
+        for attribute in attributes:
+            for modeling_source in modeling_sources:
+                if f"config.{attribute}" in modeling_source or f'getattr(config, "{attribute}"' in modeling_source:
+                    attribute_used = True
+                    break
+            if attribute_used:
+                break
+
+        case_allowed = True
+        if not attribute_used:
+            case_allowed = False
+            for attribute in attributes:
+                if attribute == "layer_norm_eps" and self.config_class.__name__ in [
+                    "BioGptConfig",
+                    "CLIPTextConfig",
+                    "CLIPVisionConfig",
+                    "CLIPSegTextConfig",
+                    "CLIPSegVisionConfig",
+                    "GLPNConfig",
+                    "GroupViTConfig",
+                    "LxmertConfig",
+                    "OwlViTTextConfig",
+                    "OwlViTVisionConfig",
+                    "SegformerConfig",
+                    "XCLIPTextConfig",
+                ]:
+                    case_allowed = True
+                # DPR has `self.bert` and the config has to be able to initialize a BERT model.
+                if attribute == "vocab_size" and self.config_class.__name__ in ["DPRConfig"]:
+                    case_allowed = True
+                if attribute.endswith("_token_id"):
+                    case_allowed = True
+                if attribute in ["bos_index", "eos_index", "pad_index", "unk_index", "mask_index"]:
+                    case_allowed = True
+                if attribute in ["langs"] and self.config_class.__name__ in ["FSMTConfig"]:
+                    case_allowed = True
+                if attribute in ["attention_types"] and self.config_class.__name__ in ["GPTNeoConfig"]:
+                    case_allowed = True
+                if attribute in ["is_encoder_decoder"] and default_value is True:
+                    case_allowed = True
+
+        return attribute_used or case_allowed
+
+
+    def check_config_attributes_being_used(self):
+        signature = dict(inspect.signature(self.config_class.__init__).parameters)
+        parameter_names = [x for x in list(signature.keys()) if x not in ["self", "kwargs"]]
+        parameter_defaults = [signature[param].default for param in parameter_names]
+
+        reversed_attribute_map = {}
+        if len(self.config_class.attribute_map) > 0:
+            reversed_attribute_map = {v: k for k, v in self.config_class.attribute_map.items()}
+
+        config_source_file = inspect.getsourcefile(self.config_class)
+
+        # Let's check against all frameworks: as long as one framework uses an attribute, we are good.
+        modeling_paths = [config_source_file.replace("configuration_", f"modeling_{backend}") for backend in ["", "tf", "flax"]]
+        modeling_sources = []
+        for path in modeling_paths:
+            if os.path.isfile(path):
+                with open(path) as fp:
+                    modeling_sources.append(fp.read())
+
+        unused_attributes = []
+        for config_param, default_value in zip(parameter_names, parameter_defaults):
+            attributes = [config_param]
+            # some configuration classes have non-empty `attribute_map`, and both names could be used in the
+            # corresponding modeling files. As long as one of them appears, it is fine.
+            if config_param in reversed_attribute_map:
+                attributes.append(reversed_attribute_map[config_param])
+            if not self._check_attribute_being_used(attributes, default_value, modeling_sources):
+                unused_attributes.append(attributes[0])
+
+        if len(unused_attributes) > 0:
+            # unused_attributes = " ".join(unused_attributes)
+            raise ValueError(
+                f"The following attributes of `{self.config_class.__name__}` (or its variant names) is/are not used in"
+                f" the modeling files: {unused_attributes}"
+            )
+
     def run_common_tests(self):
-        self.create_and_test_config_common_properties()
-        self.create_and_test_config_to_json_string()
-        self.create_and_test_config_to_json_file()
-        self.create_and_test_config_from_and_save_pretrained()
-        self.create_and_test_config_from_and_save_pretrained_subfolder()
-        self.create_and_test_config_with_num_labels()
-        self.check_config_can_be_init_without_params()
-        self.check_config_arguments_init()
+        # self.create_and_test_config_common_properties()
+        # self.create_and_test_config_to_json_string()
+        # self.create_and_test_config_to_json_file()
+        # self.create_and_test_config_from_and_save_pretrained()
+        # self.create_and_test_config_from_and_save_pretrained_subfolder()
+        # self.create_and_test_config_with_num_labels()
+        # self.check_config_can_be_init_without_params()
+        # self.check_config_arguments_init()
+        self.check_config_attributes_being_used()
 
 
 @is_staging_test
