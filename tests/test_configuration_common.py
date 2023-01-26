@@ -263,9 +263,12 @@ class ConfigTester(object):
             reversed_attribute_map = {v: k for k, v in self.config_class.attribute_map.items()}
 
         config_source_file = inspect.getsourcefile(self.config_class)
+        model_dir = os.path.dirname(config_source_file)
 
         # Let's check against all frameworks: as long as one framework uses an attribute, we are good.
-        modeling_paths = [config_source_file.replace("configuration_", f"modeling_{backend}") for backend in ["", "tf", "flax"]]
+        # Actually, let's check all modeling files in the same modeling directory, as
+        modeling_paths = [os.path.join(model_dir, fn) for fn in os.listdir(model_dir) if fn.startswith("modeling_")]
+
         modeling_sources = []
         for path in modeling_paths:
             if os.path.isfile(path):
