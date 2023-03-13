@@ -87,6 +87,7 @@ from .visual_question_answering import VisualQuestionAnsweringPipeline
 from .zero_shot_classification import ZeroShotClassificationArgumentHandler, ZeroShotClassificationPipeline
 from .zero_shot_image_classification import ZeroShotImageClassificationPipeline
 from .zero_shot_object_detection import ZeroShotObjectDetectionPipeline
+from .programming_language_processing import CodeSummarizationPipeline
 
 
 if is_tf_available():
@@ -373,6 +374,19 @@ SUPPORTED_TASKS = {
         "default": {"model": {"pt": ("MCG-NJU/videomae-base-finetuned-kinetics", "4800870")}},
         "type": "video",
     },
+# Adding definition here
+    "CodeSummarization": {
+        "impl": CodeSummarizationPipeline,
+        "tf": (),
+        "pt": (),
+        "default": {
+            "model": {
+                "pt": ("Salesforce/codet5-base-multi-sum", "37cf4c0"),
+                "tf": (),
+            }
+        },
+        "type": "text",
+    },
 }
 
 NO_FEATURE_EXTRACTOR_TASKS = set()
@@ -453,6 +467,7 @@ def check_task(task: str) -> Tuple[str, Dict, Any]:
             - `"zero-shot-classification"`
             - `"zero-shot-image-classification"`
             - `"zero-shot-object-detection"`
+            - `"CodeSummarization"`
 
     Returns:
         (normalized_task: `str`, task_defaults: `dict`, task_options: (`tuple`, None)) The normalized task name
@@ -538,6 +553,7 @@ def pipeline(
             - `"zero-shot-classification"`: will return a [`ZeroShotClassificationPipeline`].
             - `"zero-shot-image-classification"`: will return a [`ZeroShotImageClassificationPipeline`].
             - `"zero-shot-object-detection"`: will return a [`ZeroShotObjectDetectionPipeline`].
+            - `"Code-translation"`: will return a [`CodeTranslation`].
 
         model (`str` or [`PreTrainedModel`] or [`TFPreTrainedModel`], *optional*):
             The model that will be used by the pipeline to make predictions. This can be a model identifier or an
