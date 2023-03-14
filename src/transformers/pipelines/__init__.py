@@ -60,6 +60,7 @@ from .base import (
     get_default_model_and_revision,
     infer_framework_load_model,
 )
+from .code_similarity import CodeSimilarityPipeline
 from .conversational import Conversation, ConversationalPipeline
 from .depth_estimation import DepthEstimationPipeline
 from .document_question_answering import DocumentQuestionAnsweringPipeline
@@ -371,6 +372,13 @@ SUPPORTED_TASKS = {
         "default": {"model": {"pt": ("MCG-NJU/videomae-base-finetuned-kinetics", "4800870")}},
         "type": "video",
     },
+    "code-similarity": {
+        "impl": CodeSimilarityPipeline,
+        "tf": (),
+        "pt": (),
+        "default": {"model": {"pt": ("microsoft/codebert-base", "3b0952f")}},
+        "type": "text",
+    },
 }
 
 NO_FEATURE_EXTRACTOR_TASKS = set()
@@ -449,6 +457,7 @@ def check_task(task: str) -> Tuple[str, Dict, Any]:
             - `"zero-shot-classification"`
             - `"zero-shot-image-classification"`
             - `"zero-shot-object-detection"`
+            - `"code-similarity"`
 
     Returns:
         (normalized_task: `str`, task_defaults: `dict`, task_options: (`tuple`, None)) The normalized task name
@@ -478,7 +487,7 @@ def clean_custom_task(task_info):
 
 def pipeline(
     task: str = None,
-    model: Optional = None,
+    model: Optional[str] = None,
     config: Optional[Union[str, PretrainedConfig]] = None,
     tokenizer: Optional[Union[str, PreTrainedTokenizer, PreTrainedTokenizerFast]] = None,
     feature_extractor: Optional[Union[str, PreTrainedFeatureExtractor]] = None,
@@ -533,6 +542,7 @@ def pipeline(
             - `"zero-shot-classification"`: will return a [`ZeroShotClassificationPipeline`].
             - `"zero-shot-image-classification"`: will return a [`ZeroShotImageClassificationPipeline`].
             - `"zero-shot-object-detection"`: will return a [`ZeroShotObjectDetectionPipeline`].
+            - `"code-similarity"`: will return a [`CodeSimilarityPipeline`].
 
         model (`str` or [`PreTrainedModel`] or [`TFPreTrainedModel`], *optional*):
             The model that will be used by the pipeline to make predictions. This can be a model identifier or an
